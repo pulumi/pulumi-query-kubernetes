@@ -1,0 +1,19 @@
+{
+    "name": "@pulumi/query-kubernetes",
+    "version": "${VERSION}",
+    "description": "Kubernetes SDK for Pulumi Query",
+    "license": "Apache-2.0",
+    "keywords": ["pulumi", "kubernetes", "query"],
+    "homepage": "https://pulumi.io",
+    "repository": "https://github.com/pulumi/pulumi-query-kubernetes",
+    "dependencies": {
+    },
+    "devDependencies": {
+        "@types/mocha": "^2.2.42",
+        "@types/node": "^10.12.7",
+        "istanbul": "^0.4.5",
+        "mocha": "^3.5.0",
+        "tslint": "^5.11.0",
+        "typescript": "^3.0.0"
+    }
+}
