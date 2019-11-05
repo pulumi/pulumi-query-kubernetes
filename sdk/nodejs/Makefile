@@ -1,6 +1,7 @@
 PROJECT_NAME := pulumi-query-kubernetes
 NODE_MODULE_NAME := @pulumi/query-kubernetes
 include ../../build/common.mk
+include ../../variables.mk
 
 VERSION := $(shell ../../scripts/get-version)
 
@@ -8,7 +9,7 @@ export PATH := $(shell yarn bin 2>/dev/null):$(PATH)
 
 TESTPARALLELISM := 10
 
-build::
+build:: generate
 	yarn install
 	rm -rf bin/
 	tsc
@@ -18,11 +19,11 @@ build::
 lint::
 	tslint -c tslint.json -p tsconfig.json
 
-instanbul_tests::
-	istanbul test --print none _mocha -- --timeout 15000 'bin/tests/**/*.spec.js'
-	istanbul report text-summary
-	istanbul report text
+# instanbul_tests::
+# 	istanbul test --print none _mocha -- --timeout 15000 'bin/tests/**/*.spec.js'
+# 	istanbul report text-summary
+# 	istanbul report text
 
-test_fast:: instanbul_tests
+# test_fast:: instanbul_tests
 
-test_all:: instanbul_tests
+# test_all:: instanbul_tests

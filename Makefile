@@ -1,6 +1,7 @@
 PROJECT_NAME := pulumi-query-kubernetes
 SUB_PROJECTS := sdk/nodejs
 include build/common.mk
+include variables.mk
 
 .PHONY: publish_packages
 publish_packages:
