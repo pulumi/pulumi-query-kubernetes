@@ -21,7 +21,7 @@ import * as k8s from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
 import { Resource } from "@pulumi/pulumi";
 import { ResolvedResource } from "@pulumi/pulumi/queryable";
-import { invoke, streamInvoke } from "@pulumi/pulumi/runtime";
+import { streamInvoke } from "@pulumi/pulumi/runtime";
 import * as query from "@pulumi/query";
 import { AsyncIterable } from "@pulumi/query/interfaces";
 import * as rx from "rxjs";
@@ -1853,20 +1853,14 @@ export function list<U extends Resource>(apiVersion: string, kind: string): quer
 
     const invokeIterator = {
         [Symbol.asyncIterator]: function(): AsyncIterator<any> {
-            // Don't depend on TypeScript's `Iterator`, as users have to opt into it.
-            let inv: any;
+            let inv: AsyncIterator<any>;
             return {
                 async next() {
                     if (inv === undefined) {
-                        inv = (await pulumi.runtime
-                            .invoke("kubernetes:kubernetes:list", {
-                                group: "apps",
-                                version: "v1",
-                                kind: "Deployment",
-                            })
-                            .then<any[]>(({ items }) => {
-                                return items;
-                            }))[Symbol.iterator]();
+                        inv = (await pulumi.runtime.streamInvoke(
+                            "kubernetes:kubernetes:list",
+                            gvk,
+                        ))[Symbol.asyncIterator]();
                     }
                     return inv.next();
                 },
@@ -1876,6 +1870,7 @@ export function list<U extends Resource>(apiVersion: string, kind: string): quer
 
     return query
         .from(() => invokeIterator)
+        .filter(resource => resource !== undefined)
         .map<ResolvedResource<U>>(({ type: typ, ...outputs }) => {
             return { ...outputs, __pulumiType: pulumiType };
         })
@@ -3762,3 +3757,5 @@ export class ResourceSet<A, B = never, C = never, D = never, E = never, F = neve
         })();
     }
 }
+
+export * from "./logs";
