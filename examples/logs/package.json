@@ -1,0 +1,19 @@
+{
+    "name": "steps",
+    "license": "Apache-2.0",
+    "main": "bin/index.js",
+    "typings": "bin/index.d.ts",
+    "devDependencies": {
+        "@types/node": "^12.12.7",
+        "typescript": "^3.7.0"
+    },
+    "peerDependencies": {
+        "@pulumi/query-kubernetes": "dev"
+    },
+    "dependencies": {
+        "@pulumi/kubernetes": "feature-stream-logs",
+        "@pulumi/pulumi": "1.6.0-alpha.1573502974",
+        "chalk": "^2.4.2",
+        "rxjs": "^6.5.3"
+    }
+}
