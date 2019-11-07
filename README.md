@@ -68,7 +68,7 @@ a simple report of all namespaces live in the cluster of your active `$KUBECONFI
 PULUMI_DEBUG_COMMANDS=true pulumi query
 ```
 
-Once you've done this, have a look at the `queries` directory, which contains many more interesting
+Once you've done this, have a look at the [`examples`](https://github.com/pulumi/pulumi-query-kubernetes/tree/master/examples) directory, which contains many more interesting
 sample queries which you can modify to your uses.
 
 
