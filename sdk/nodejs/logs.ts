@@ -15,18 +15,18 @@
 import * as pulumi from "@pulumi/pulumi";
 
 export async function* podLogs(namespace: string, name: string) {
-  const logLines = pulumi.runtime.streamInvoke(
-    "kubernetes:kubernetes:podLogs",
-    {
-      namespace,
-      name
-    }
-  );
+    const logLines = pulumi.runtime.streamInvoke(
+        "kubernetes:kubernetes:podLogs",
+        {
+            namespace,
+            name,
+        },
+    );
 
-  for await (const batch of await logLines) {
-    if (batch !== undefined) {
-      const lines = batch.lines as string[];
-      yield* lines;
+    for await (const batch of await logLines) {
+        if (batch !== undefined) {
+            const lines = batch.lines as string[];
+            yield* lines;
+        }
     }
-  }
 }
