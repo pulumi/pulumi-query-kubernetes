@@ -30,11 +30,12 @@ namespaceReport();
 // Print a small report of each namespace.
 function namespaceReport() {
     const report = kq.list("v1", "Namespace").map(async ns => {
-        const pods = kq.list("v1", "Pod");
-        const secrets = kq.list("v1", "Secret");
-        const services = kq.list("v1", "Service");
-        const configMaps = kq.list("v1", "ConfigMap");
-        const pvcs = kq.list("v1", "PersistentVolumeClaim");
+        const namespace = ns.metadata!.name!;
+        const pods = kq.list("v1", "Pod", namespace);
+        const secrets = kq.list("v1", "Secret", namespace);
+        const services = kq.list("v1", "Service", namespace);
+        const configMaps = kq.list("v1", "ConfigMap", namespace);
+        const pvcs = kq.list("v1", "PersistentVolumeClaim", namespace);
 
         const ps = await pods
             .filter(pod => pod.metadata!.namespace === ns.metadata!.name)
@@ -42,7 +43,9 @@ function namespaceReport() {
 
         return {
             namespace: ns,
-            pods: await pods.filter(pod => pod.metadata!.namespace === ns.metadata!.name).toArray(),
+            pods: await pods
+                .filter(pod => pod.metadata!.namespace === ns.metadata!.name)
+                .toArray(),
             secrets: await secrets
                 .filter(secret => secret.metadata!.namespace === ns.metadata!.name)
                 .toArray(),
@@ -50,9 +53,13 @@ function namespaceReport() {
                 .filter(service => service.metadata!.namespace === ns.metadata!.name)
                 .toArray(),
             configMaps: await configMaps
-                .filter(configMap => configMap.metadata!.namespace === ns.metadata!.name)
+                .filter(
+                    configMap => configMap.metadata!.namespace === ns.metadata!.name
+                )
                 .toArray(),
-            pvcs: await pvcs.filter(pvc => pvc.metadata!.namespace === ns.metadata!.name).toArray(),
+            pvcs: await pvcs
+                .filter(pvc => pvc.metadata!.namespace === ns.metadata!.name)
+                .toArray()
         };
     });
 
@@ -68,28 +75,29 @@ function namespaceReport() {
 }
 
 // Print a small report of the status of all certificate signing requests.
-function certSignReqStatus() {
+function certSignReqStatus(namespace?: string) {
     const csrs = kq
-        .list("certificates.k8s.io/v1beta1", "CertificateSigningRequest")
+        .list("certificates.k8s.io/v1beta1", "CertificateSigningRequest", namespace)
         .map(csr => {
             // Get status of the CSR.
             const pending = {
                 type: "Pending",
                 message: "Pending",
                 reason: "Pending",
-                lastUpdateTime: {},
+                lastUpdateTime: {}
             };
             if (csr.status.conditions == null) {
                 return { status: pending, request: csr };
             }
 
             const conditions = csr.status.conditions.filter(
-                cond => cond.type === "Approved" || cond.type === "Denied",
+                cond => cond.type === "Approved" || cond.type === "Denied"
             );
 
             return {
-                status: conditions.length > 0 ? conditions[conditions.length - 1] : pending,
-                request: csr,
+                status:
+                    conditions.length > 0 ? conditions[conditions.length - 1] : pending,
+                request: csr
             };
         })
         // Group CSRs by type (one of: `"Approved"`, `"Pending"`, or `"Denied"`).
@@ -106,9 +114,9 @@ function certSignReqStatus() {
 }
 
 // Print the number of distinct MySQL versions running in your cluster.
-function distinctMySqlVersions() {
+function distinctMySqlVersions(namespace?: string) {
     const mySqlVersions = kq
-        .list("v1", "Pod")
+        .list("v1", "Pod", namespace)
         .flatMap(pod => pod.spec.containers)
         .map(container => container.image)
         .filter(imageName => imageName.includes("mysql"))
@@ -118,9 +126,9 @@ function distinctMySqlVersions() {
 }
 
 // Print all warning and error events.
-function warningAndErrorEvents() {
+function warningAndErrorEvents(namespace?: string) {
     const warningsAndErrors = kq
-        .list("v1", "Event")
+        .list("v1", "Event", namespace)
         .filter(e => e.type === "Warning" || e.type === "Error")
         .groupBy(e => e.involvedObject.kind);
 
@@ -128,35 +136,37 @@ function warningAndErrorEvents() {
         console.log(`kind: ${events.key}`);
         events.forEach(e =>
             console.log(
-                `  ${e.type}\t(x${e.count})\t${e.involvedObject.name}\n    Message: ${e.message}`,
-            ),
+                `  ${e.type}\t(x${e.count})\t${e.involvedObject.name}\n    Message: ${e.message}`
+            )
         );
     });
 }
 
 // Print the last two revisions of a deployment.
-function lastTwoRevisions() {
+function lastTwoRevisions(namespace?: string) {
     function getRevisionHistory(name: string) {
         return kq
-            .list("extensions/v1beta1", "ReplicaSet")
+            .list("extensions/v1beta1", "ReplicaSet", namespace)
             .filter(
                 async rs =>
                     (await q
                         .from(rs.metadata!.ownerReferences || [])
                         .filter(oref => oref.name === name)
-                        .count()) > 0,
+                        .count()) > 0
             )
-            .orderBy(rs => rs.metadata.annotations["deployment.kubernetes.io/revision"]);
+            .orderBy(
+                rs => rs.metadata.annotations["deployment.kubernetes.io/revision"]
+            );
     }
 
     const history = kq
-        .list("apps/v1", "Deployment")
+        .list("apps/v1", "Deployment", namespace)
         .filter(d => d.metadata.name === "nginx")
         .flatMap(d =>
             getRevisionHistory(d.metadata!.name!)
                 .reverse()
                 .take(2)
-                .toArray(),
+                .toArray()
         );
 
     history.forEach(rollout => {
@@ -166,10 +176,11 @@ function lastTwoRevisions() {
 
 // Print namespaces with no resource quotas.
 function namespacesWithNoQuota() {
-    const noQuotas = kq.list("v1", "Namespace").filter(async () => {
+    const noQuotas = kq.list("v1", "Namespace").filter(async ns => {
+        const namespace = ns.metadata!.name;
         return (
             (await kq
-                .list("v1", "ResourceQuota")
+                .list("v1", "ResourceQuota", namespace)
                 // Retrieve only ResourceQuotas that (1) apply to this namespace, and (2)
                 // specify hard limits on memory.
                 .filter(rq => rq.spec.hard["limits.memory"] != null)

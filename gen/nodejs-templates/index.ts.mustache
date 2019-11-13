@@ -34,11 +34,11 @@ import { map, scan } from "rxjs/operators";
 {{#Groups}}
 {{#Versions}}
 {{#Kinds}}
-export function list(apiVersion: "{{RawAPIVersion}}", kind: "{{Kind}}"): query.AsyncQueryable<ResolvedResource<k8s.{{Group}}.{{Version}}.{{Kind}}>>;
+export function list(apiVersion: "{{RawAPIVersion}}", kind: "{{Kind}}", namespace?: string): query.AsyncQueryable<ResolvedResource<k8s.{{Group}}.{{Version}}.{{Kind}}>>;
 {{/Kinds}}
 {{/Versions}}
 {{/Groups}}
-export function list<U extends Resource>(apiVersion: string, kind: string): query.AsyncQueryable<ResolvedResource<U>> {
+export function list<U extends Resource>(apiVersion: string, kind: string, namespace: string = "default"): query.AsyncQueryable<ResolvedResource<U>> {
 
     let gvk: { group: string; version: string; kind: string };
     let pulumiType: string;
@@ -71,7 +71,7 @@ export function list<U extends Resource>(apiVersion: string, kind: string): quer
                     if (inv === undefined) {
                         inv = (await pulumi.runtime.streamInvoke(
                             "kubernetes:kubernetes:list",
-                            gvk,
+                            { ...gvk, namespace },
                         ))[Symbol.asyncIterator]();
                     }
                     return inv.next();
@@ -99,11 +99,11 @@ export type WatchEvent<T> = { object: T; type: WatchTypes };
 {{#Groups}}
 {{#Versions}}
 {{#Kinds}}
-export function watch(apiVersion: "{{RawAPIVersion}}", kind: "{{Kind}}"): AsyncIterable<WatchEvent<ResolvedResource<k8s.{{Group}}.{{Version}}.{{Kind}}>>>;
+export function watch(apiVersion: "{{RawAPIVersion}}", kind: "{{Kind}}", namespace?: string): AsyncIterable<WatchEvent<ResolvedResource<k8s.{{Group}}.{{Version}}.{{Kind}}>>>;
 {{/Kinds}}
 {{/Versions}}
 {{/Groups}}
-export async function* watch<U extends Resource>(apiVersion: string, kind: string) {
+export async function* watch<U extends Resource>(apiVersion: string, kind: string, namespace: string = "default") {
 
     let gvk: { group: string; version: string; kind: string };
     let pulumiType: string;
