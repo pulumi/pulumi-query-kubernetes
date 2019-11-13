@@ -48,25 +48,6 @@ programmatically against the resources in the cluster it points to.
 * How many distinct versions of the mysql container are running in all of my clusters? (See
   [example][example].)
 
-##
-
-A Kubernetes SDK Pulumi CloudQuery. Users write a program using the relational query SDK, and then
-run them with the `pulumi query` command. For example:
-
-```typescript
-import * as kq from "@pulumi/query-kubernetes";
-
-// Find all distinct versions of MySQL running in your cluster.
-const mySqlVersions = kq
-    .list("v1", "Pod")
-    .flatMap(pod => pod.spec.containers)
-    .map(container => container.image)
-    .filter(imageName => imageName.includes("mysql"))
-    .distinct();
-
-mySqlVersions.forEach(console.log);
-```
-
 ## Requirements
 
 * Pulumi CLI version > 1.5.0.
