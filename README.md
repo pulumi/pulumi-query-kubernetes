@@ -5,6 +5,51 @@
 
 # Kubernetes SDK for Pulumi Query
 
+A relational TypeScript SDK for querying Kubernetes resources in any cluster, either on-prem or in
+any cloud.
+
+Users write a program using the relational query SDK, and then run them with the `pulumi query`
+subcommand of the [Pulumi CLI](https://www.pulumi.com/docs/reference/cli/). There are many
+[examples][example]. This one finds all distinct versions of MySQL running in your cluster:
+
+```typescript
+import * as kq from "@pulumi/query-kubernetes";
+
+// Find all distinct versions of MySQL running in your cluster.
+const mySqlVersions = kq
+    .list("v1", "Pod")
+    .flatMap(pod => pod.spec.containers)
+    .map(container => container.image)
+    .filter(imageName => imageName.includes("mysql"))
+    .distinct();
+
+mySqlVersions.forEach(console.log);
+```
+
+`pulumi query` will inspect your local [kubeconfig] file for the active context, and run the query
+programmatically against the resources in the cluster it points to.
+
+## Use cases
+
+**Operations:**
+* Which applications are scheduled on nodes that report high memory pressure? (See
+  [example][example].)
+* What is the difference between the last two rollouts of a Deployment? (See [example][example].)
+* Which applications are currently emitting logs that contain the text "ERROR:",
+  and why?
+
+**Security and Compliance:**
+* Which Service Accounts have access to this Secret?
+* Which CertificateSigningRequests were approved this week, and what are they
+  being used for? (See [example][example].)
+
+**Governance:**
+* Which Services are publicly exposed to the Internet?
+* How many distinct versions of the mysql container are running in all of my clusters? (See
+  [example][example].)
+
+##
+
 A Kubernetes SDK Pulumi CloudQuery. Users write a program using the relational query SDK, and then
 run them with the `pulumi query` command. For example:
 
@@ -22,34 +67,21 @@ const mySqlVersions = kq
 mySqlVersions.forEach(console.log);
 ```
 
-## Preqrequisites
+## Requirements
 
-Before you get started, be sure you have version > 1.5.0 of the Pulumi CLI. This has the newest and
-most polished "query mode" bits.
+* Pulumi CLI version > 1.5.0.
 
 ## Getting Started
 
-The directory `sdk/nodejs/examples` contains many example queries.
-
-But, because this repository is private to the Pulumi npm org, it is inaccessible to ~all employees.
-To get started, you'll need to build this repository from scratch:
-
-```sh
-git clone git@github.com:pulumi/pulumi-query-kubernetes.git
-cd pulumi-query-kubernetes
-make
-```
-
-Next, you'll want to link the examples against this build of `@pulumi/query-kubernetes`:
+The directory `sdk/nodejs/examples/list` contains many example queries.
 
 ```sh
 cd sdk/nodejs/examples/list
 yarn install
-yarn link @pulumi/query-kubernetes
 ```
 
-Now from that directory, you can run `pulumi query`. The default example simply lists the existing
-deployments.
+Now from that directory, you can run `pulumi query`. The default example prints
+a simple report of all namespaces live in the cluster of your active `$KUBECONFIG` context.
 
 ```sh
 PULUMI_DEBUG_COMMANDS=true pulumi query
@@ -57,3 +89,8 @@ PULUMI_DEBUG_COMMANDS=true pulumi query
 
 Once you've done this, have a look at the `queries` directory, which contains many more interesting
 sample queries which you can modify to your uses.
+
+
+[kubeconfig]: https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/
+[examples]: https://github.com/pulumi/pulumi-query-kubernetes/tree/master/examples/list
+[example]: https://github.com/pulumi/pulumi-query-kubernetes/blob/master/examples/list/index.ts
