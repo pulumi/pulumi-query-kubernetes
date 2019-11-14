@@ -47,14 +47,19 @@ function namespaceReport() {
                 .filter(pod => pod.metadata!.namespace === ns.metadata!.name)
                 .toArray(),
             secrets: await secrets
-                .filter(secret => secret.metadata!.namespace === ns.metadata!.name)
+                .filter(
+                    secret => secret.metadata!.namespace === ns.metadata!.name
+                )
                 .toArray(),
             services: await services
-                .filter(service => service.metadata!.namespace === ns.metadata!.name)
+                .filter(
+                    service => service.metadata!.namespace === ns.metadata!.name
+                )
                 .toArray(),
             configMaps: await configMaps
                 .filter(
-                    configMap => configMap.metadata!.namespace === ns.metadata!.name
+                    configMap =>
+                        configMap.metadata!.namespace === ns.metadata!.name
                 )
                 .toArray(),
             pvcs: await pvcs
@@ -64,20 +69,26 @@ function namespaceReport() {
     });
 
     // Print small report.
-    report.forEach(({ namespace, pods, secrets, services, configMaps, pvcs }) => {
-        console.log(namespace.metadata.name);
-        console.log(`  Pods:\t\t${pods.length}`);
-        console.log(`  Secrets:\t${secrets.length}`);
-        console.log(`  Services:\t${services.length}`);
-        console.log(`  ConfigMaps:\t${configMaps.length}`);
-        console.log(`  PVCs:\t\t${pvcs.length}`);
-    });
+    report.forEach(
+        ({ namespace, pods, secrets, services, configMaps, pvcs }) => {
+            console.log(namespace.metadata.name);
+            console.log(`  Pods:\t\t${pods.length}`);
+            console.log(`  Secrets:\t${secrets.length}`);
+            console.log(`  Services:\t${services.length}`);
+            console.log(`  ConfigMaps:\t${configMaps.length}`);
+            console.log(`  PVCs:\t\t${pvcs.length}`);
+        }
+    );
 }
 
 // Print a small report of the status of all certificate signing requests.
 function certSignReqStatus(namespace?: string) {
     const csrs = kq
-        .list("certificates.k8s.io/v1beta1", "CertificateSigningRequest", namespace)
+        .list(
+            "certificates.k8s.io/v1beta1",
+            "CertificateSigningRequest",
+            namespace
+        )
         .map(csr => {
             // Get status of the CSR.
             const pending = {
@@ -96,7 +107,9 @@ function certSignReqStatus(namespace?: string) {
 
             return {
                 status:
-                    conditions.length > 0 ? conditions[conditions.length - 1] : pending,
+                    conditions.length > 0
+                        ? conditions[conditions.length - 1]
+                        : pending,
                 request: csr
             };
         })
@@ -155,7 +168,8 @@ function lastTwoRevisions(namespace?: string) {
                         .count()) > 0
             )
             .orderBy(
-                rs => rs.metadata.annotations["deployment.kubernetes.io/revision"]
+                rs =>
+                    rs.metadata.annotations["deployment.kubernetes.io/revision"]
             );
     }
 
