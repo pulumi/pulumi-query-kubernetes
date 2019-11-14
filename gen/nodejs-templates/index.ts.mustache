@@ -31,6 +31,32 @@ import { map, scan } from "rxjs/operators";
 // Implementation of `list`.
 //
 
+/**
+ * Lists all Kubernetes resources of a specific type live in a cluster. Resource types are
+ * identified with traditional Kubernetes `apiVersion` and `kind`. For example `list("v1", "Pod")`
+ * produces a set of Pods.
+ *
+ * By default, `list` operates on the cluster and namespace identified by the active context of the
+ * kubeconfig file. Namespace can be specified manually with the optional `namespace` parameter.
+ *
+ * The return value of `list` implements `AsyncQueryable`, which exposes powerful facilities for
+ * filtering, mapping, and joining resources sets to other resource sets. The following example
+ * produces the distinct versions of MySQL running in the active context in the kubeconfig file.
+ *
+ * ```typescript
+ * import * as kq from "@pulumi/query-kubernetes";
+ *
+ * // Find all distinct versions of MySQL running in your cluster.
+ * const mySqlVersions = kq
+ *     .list("v1", "Pod")
+ *     .flatMap(pod => pod.spec.containers)
+ *     .map(container => container.image)
+ *     .filter(imageName => imageName.includes("mysql"))
+ *     .distinct();
+ *
+ * mySqlVersions.forEach(console.log);
+ * ```
+ */
 {{#Groups}}
 {{#Versions}}
 {{#Kinds}}
@@ -96,6 +122,25 @@ export function list<U extends Resource>(apiVersion: string, kind: string, names
 export type WatchTypes = "ADDED" | "MODIFIED" | "DELETED" | "ERROR";
 export type WatchEvent<T> = { object: T; type: WatchTypes };
 
+/**
+ * Watches indefinitely for updates on all Kubernetes resources of a specific type live in a
+ * cluster. Resource types are identified with traditional Kubernetes `apiVersion` and `kind`. For
+ * example `watch("v1", "Pod")` will produce an infinite stream of updates to Pods in the active
+ * kubeconfig context.
+ *
+ * By default, `watch` operates on the cluster and namespace identified by the active context of
+ * the kubeconfig file. Namespace can be specified manually with the optional `namespace`
+ * parameter.
+ *
+ * The return value of `watch` implements `AsyncIterable`, so it can be enumerated using
+ * `for await`, as below.
+ *
+ * ```
+ * for await (const pod of watch("v1", "Pod")) {
+ *     console.log(pod.metadata!.name);
+ * }
+ * ```
+ */
 {{#Groups}}
 {{#Versions}}
 {{#Kinds}}
@@ -138,33 +183,76 @@ export async function* watch<U extends Resource>(apiVersion: string, kind: strin
     }
 }
 
-export class ResourceSet<A, B = never, C = never, D = never, E = never, F = never, G = never, H = never, I = never, J = never> {
-    static toResourceSet<T extends { metadata?: k8s.types.output.meta.v1.ObjectMeta }>(
+export interface KubernetesResource {
+    metadata?: {
+        namespace?: string,
+        name?: string,
+    };
+}
+
+/**
+ * `ResourceSet` watches the Kubernetes API server for resource updates, and uses them to maintain
+ * an up-to-date copy of a set of resource definitions. Using `onUpdate`, users can take an
+ * arbitrary action any time any resource in the set is updated.
+ *
+ * For example, in the following code, `ResourceSet` consumes updates to all `Pod`s in the active
+ * kubeconfig context, and when any `Pod` is updated, it prints every `Pod`'s name.
+ *
+ * ```
+ * new kq.ResourceSet([kq.watch("v1", "Pod")]).onUpdate(([events]) => {
+ *     events.orderBy(p => p.metadata!.name).forEach(p => {
+ *         console.log(`${p.metadata!.name}`)
+ *     })
+ * });
+ * ```
+ */
+export class ResourceSet<
+    A extends KubernetesResource,
+    B = never | KubernetesResource,
+    C = never | KubernetesResource,
+    D = never | KubernetesResource,
+    E = never | KubernetesResource,
+    F = never | KubernetesResource,
+    G = never | KubernetesResource,
+    H = never | KubernetesResource,
+    I = never | KubernetesResource,
+    J = never | KubernetesResource,
+> {
+
+    static toResourceSet<T extends KubernetesResource>(
         acc: Map<string, T>,
         e: WatchEvent<T>,
     ): Map<string, T> {
-        const { object } = e;
+        const { type, object } = e;
         const [ns, name] = [object.metadata!.namespace!, object.metadata!.name!];
-        acc.set(`${ns}/${name}`, object);
+        if (type === "DELETED") {
+            acc.delete(`${ns}/${name}`);
+        } else {
+            acc.set(`${ns}/${name}`, object);
+        }
         return acc;
     }
 
-    constructor(watches: [AsyncIterable<A>])
-    constructor(watches: [AsyncIterable<A>, AsyncIterable<B>])
-    constructor(watches: [AsyncIterable<A>, AsyncIterable<B>, AsyncIterable<C>])
-    constructor(watches: [AsyncIterable<A>, AsyncIterable<B>, AsyncIterable<C>, AsyncIterable<D>])
-    constructor(watches: [AsyncIterable<A>, AsyncIterable<B>, AsyncIterable<C>, AsyncIterable<D>, AsyncIterable<E>])
-    constructor(watches: [AsyncIterable<A>, AsyncIterable<B>, AsyncIterable<C>, AsyncIterable<D>, AsyncIterable<E>, AsyncIterable<F>])
-    constructor(watches: [AsyncIterable<A>, AsyncIterable<B>, AsyncIterable<C>, AsyncIterable<D>, AsyncIterable<E>, AsyncIterable<F>, AsyncIterable<G>])
-    constructor(watches: [AsyncIterable<A>, AsyncIterable<B>, AsyncIterable<C>, AsyncIterable<D>, AsyncIterable<E>, AsyncIterable<F>, AsyncIterable<G>, AsyncIterable<H>])
-    constructor(watches: [AsyncIterable<A>, AsyncIterable<B>, AsyncIterable<C>, AsyncIterable<D>, AsyncIterable<E>, AsyncIterable<F>, AsyncIterable<G>, AsyncIterable<H>, AsyncIterable<I>])
-    constructor(watches: [AsyncIterable<A>, AsyncIterable<B>, AsyncIterable<C>, AsyncIterable<D>, AsyncIterable<E>, AsyncIterable<F>, AsyncIterable<G>, AsyncIterable<H>, AsyncIterable<I>, AsyncIterable<J>])
-    constructor(private watches: AsyncIterable<any>[]) {}
+    constructor(watches: [AsyncIterable<WatchEvent<A>>])
+    constructor(watches: [AsyncIterable<WatchEvent<A>>, AsyncIterable<WatchEvent<B>>])
+    constructor(watches: [AsyncIterable<WatchEvent<A>>, AsyncIterable<WatchEvent<B>>, AsyncIterable<WatchEvent<C>>])
+    constructor(watches: [AsyncIterable<WatchEvent<A>>, AsyncIterable<WatchEvent<B>>, AsyncIterable<WatchEvent<C>>, AsyncIterable<WatchEvent<D>>])
+    constructor(watches: [AsyncIterable<WatchEvent<A>>, AsyncIterable<WatchEvent<B>>, AsyncIterable<WatchEvent<C>>, AsyncIterable<WatchEvent<D>>, AsyncIterable<WatchEvent<E>>])
+    constructor(watches: [AsyncIterable<WatchEvent<A>>, AsyncIterable<WatchEvent<B>>, AsyncIterable<WatchEvent<C>>, AsyncIterable<WatchEvent<D>>, AsyncIterable<WatchEvent<E>>, AsyncIterable<WatchEvent<F>>])
+    constructor(watches: [AsyncIterable<WatchEvent<A>>, AsyncIterable<WatchEvent<B>>, AsyncIterable<WatchEvent<C>>, AsyncIterable<WatchEvent<D>>, AsyncIterable<WatchEvent<E>>, AsyncIterable<WatchEvent<F>>, AsyncIterable<WatchEvent<G>>])
+    constructor(watches: [AsyncIterable<WatchEvent<A>>, AsyncIterable<WatchEvent<B>>, AsyncIterable<WatchEvent<C>>, AsyncIterable<WatchEvent<D>>, AsyncIterable<WatchEvent<E>>, AsyncIterable<WatchEvent<F>>, AsyncIterable<WatchEvent<G>>, AsyncIterable<WatchEvent<H>>])
+    constructor(watches: [AsyncIterable<WatchEvent<A>>, AsyncIterable<WatchEvent<B>>, AsyncIterable<WatchEvent<C>>, AsyncIterable<WatchEvent<D>>, AsyncIterable<WatchEvent<E>>, AsyncIterable<WatchEvent<F>>, AsyncIterable<WatchEvent<G>>, AsyncIterable<WatchEvent<H>>, AsyncIterable<WatchEvent<I>>])
+    constructor(watches: [AsyncIterable<WatchEvent<A>>, AsyncIterable<WatchEvent<B>>, AsyncIterable<WatchEvent<C>>, AsyncIterable<WatchEvent<D>>, AsyncIterable<WatchEvent<E>>, AsyncIterable<WatchEvent<F>>, AsyncIterable<WatchEvent<G>>, AsyncIterable<WatchEvent<H>>, AsyncIterable<WatchEvent<I>>, AsyncIterable<WatchEvent<J>>])
+    constructor(private watches: AsyncIterable<any>[]) {
+        if (watches.length === 0) {
+            throw new Error("Argument to ResourceSet must be a list with at least 1 element");
+        }
+    }
 
     public onUpdate(callback: (sets: [query.AsyncQueryable<A>, query.AsyncQueryable<B>, query.AsyncQueryable<C>, query.AsyncQueryable<D>, query.AsyncQueryable<E>, query.AsyncQueryable<F>, query.AsyncQueryable<G>, query.AsyncQueryable<H>, query.AsyncQueryable<I>, query.AsyncQueryable<J>]) => void): void;
     public onUpdate(callback: (sets: any) => void): void {
         const watches = this.watches.map(w => {
-            const subject = new rx.Subject<any>();
+            const subject = new rx.Subject<WatchEvent<KubernetesResource>>();
             (async () => {
                 for await (const resource of w) {
                     subject.next(resource);
