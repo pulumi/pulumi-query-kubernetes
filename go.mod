@@ -9,5 +9,5 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/pulumi/pulumi v1.0.0-beta.4.0.20190826221914-99d70e4610d2
 	github.com/pulumi/pulumi-kubernetes v1.2.3
-	k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655
+	k8s.io/apimachinery v0.15.7
 )
